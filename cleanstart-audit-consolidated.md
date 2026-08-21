@@ -1,11 +1,12 @@
 # CleanStart Docker Hub audit — consolidated report
 
-**Scope (per Biplab, 20/08 18:12):** review the README documentation file, and registry profile links directly pointing to website pages.
-**Primary image:** `cleanstart/python`
-**Corroborating image:** `cleanstart/keycloak`
+**Primary image:** `cleanstart/python` [link](https://hub.docker.com/r/cleanstart/python) 
+
+**Corroborating image:** `cleanstart/keycloak` [link](https://hub.docker.com/r/cleanstart/keycloak/tags)
+
 **Run date:** 20 August 2026
 **Operator:** Khushi Trivedi
-**Out of scope:** test cases (explicitly excluded). CVE scanning, SBOM and signature verification were not requested.
+**Out of scope:** test cases (explicitly excluded). CVE scanning, SBOM and signature verification not to be included.
 
 **Target identity — read this first.** The `latest` tag resolved to `sha256:f8b9d255e…` at the start of the session and `sha256:ea66d4c75e…` minutes later. All `cleanstart/python` findings below describe **`ea66d4c75e…`**. The digest has been stable since.
 
@@ -82,41 +83,7 @@ Audited separately. Included because it proves which `python` findings are templ
 
 ---
 
-# SECTION 4 — Identified but NOT yet verified
-
-Surfaced from reading the catalog and website. **Each needs confirming before it goes in front of anyone.** These are the items closest to the stated scope — "registry links directly pointing to website pages."
-
-| ID | Sev est. | Finding | Where | Verify by |
-|---|---|---|---|---|
-| **U1** | Medium | "Community Images:" appears as a label with **no URL after it** — sub-links nest under an empty parent | `python`, `keycloak`, `cadvisor`, `minio` | Read the rendered page |
-| **U2** | Medium | **Two different README templates in circulation.** `openldap` uses a different link set — "Container Registry: `cleanstart.com`" and "How-to-Run: `github.com/orgs/cleanstart-containers/`" — while others use `images.cleanstart.com` + `github.com/cleanstart-containers` | `openldap` vs `python` | Open both, diff |
-| **U3** | High | **Mislabelled link.** `openldap` labels `https://www.cleanstart.com/` as "Container Registry". That is the marketing homepage, not a registry | `openldap` | Follow the link |
-| **U4** | High | **Registry path contradiction.** GitHub repos document `ghcr.io/cleanstart-containers/<name>`; Docker Hub documents `cleanstart/<name>`. Same image, two pull paths, no explanation of which is authoritative | `github.com/cleanstart-containers/nats`, `/openldap` vs Docker Hub | Compare both READMEs |
-| **U5** | Medium | **Most images link to the catalog root, not their own page.** The good deep-link pattern exists on `metallb-controller` (W16) but isn't applied to `python` | `metallb-controller` vs `python` | Compare |
-| **U6** | High | **Domain contradiction.** `cleanstart.com/knowledge-hub/image-catalog` references `images.cleanstart.dev`, `docs.cleanstart.dev/images`, `github.com/cleanstart/images/issues` and `gcr.io/cleanstart-images/…` — a different domain, different GitHub org and different registry from everything on Docker Hub | knowledge-hub page | Open it; check whether the `.dev` domains resolve at all |
-| **U7** | High | **"zero-CVE" vs "near-zero CVEs" vs a badge showing 1.** `cleanstart.com` homepage says zero-CVE; `images.cleanstart.com` says near-zero CVEs; the Docker Hub `python` page badge showed **1**. Three surfaces, three different claims | all three | Screenshot each, dated |
-| **U8** | Medium | **FIPS wording inconsistent.** Homepage says "FIPS-compliant"; knowledge-hub says "FIPS 140-3 readiness". Different claims, and neither names a CMVP certificate number | website | Read both |
-| **U9** | Low | **Catalog size inconsistent.** Knowledge-hub says "1,200+ images"; internal product-facts flags this as unresolved against a "350+" figure | knowledge-hub | Flag to BD; do not resolve yourself |
-
-**U6, U7 and U8 are the highest-value items for the stated scope** — they are website pages that the registry links to, disagreeing with the registry and with each other.
-
----
-
-# SECTION 5 — Still open
-
-| Ref | Check | Why it matters |
-|---|---|---|
-| **O1** | Do the 7 links land where their **labels promise**? Deep-link or catalog root? Consistent across images? | HTTP `200` only proves a URL resolves. Axes 2–4 of the link check are untested — and this is the core of the assignment |
-| **O2** | Registry **profile** pages: `hub.docker.com/u/cleanstart`, `gallery.ecr.aws/cleanstart/`, `github.com/cleanstart-containers` | Biplab's wording was "registry profile links". Only image-page links have been checked so far |
-| **O3** | Cross-image diff of the Documentation Resources block: `kafka`, `curl`, `mongodb`, `openldap`, `metallb-controller` | Confirms which findings are systemic vs image-specific |
-| **O4** | `docker run --rm --entrypoint="" cleanstart/python:latest-dev pip --version` | Decides whether N6 is "pip missing entirely" or "the page documents the wrong tag" — materially different fixes |
-| **O5** | `docker run --rm --entrypoint="" cleanstart/python:latest-dev python -c 'import sys;print(sys.version)'` | Do both tags ship the same interpreter version? |
-| **O6** | Full README read-through for template leakage and unverifiable adjective copy | Manual. Candidates already noted: "enterprise-ready configurations", "advanced security features", "integrated security scanning" |
-| **O7** | Verification of all nine Section 4 items | Highest-value work remaining |
-
----
-
-# SECTION 6 — Recommended fixes
+# SECTION 4 — Recommended fixes
 
 Ordered by impact per unit of effort. Items 1–5 are template changes that fix every image in the catalog at once.
 
@@ -126,14 +93,12 @@ Ordered by impact per unit of effort. Items 1–5 are template changes that fix 
 | 2 | Set a `Cmd` on images, or rewrite every `docker run -d` example to pass a real command | N5, K1, K2 | Entire catalog |
 | 3 | Add OCI provenance labels at build time: `version`, `revision`, `source`, `created` | N1, N2, K5 | Entire catalog |
 | 4 | Generate the environment-variable table from the image, not from a template | N3, N7, K6 | Entire catalog |
-| 5 | Deep-link each image to its own catalog page, following the `metallb-controller` pattern | U5, W16 | Entire catalog |
+| 5 | Deep-link each image to its own catalog page, following the `metallb-controller` pattern | W16 | Entire catalog |
 | 6 | Decide on pip: ship it in `latest`, or remove it from the feature list and document `latest-dev` as the tag for installing packages | N6 | `python` |
 | 7 | Drop `PIP_BREAK_SYSTEM_PACKAGES=1` from `latest`, since it configures an absent tool | N7 | `python` |
 | 8 | State the Python version on the page, generated from the build | N3 | `python` |
 | 9 | Declare `EXPOSE` wherever the README documents a port | N8, K9 | Entire catalog |
 | 10 | Add a one-line warning to the workspace-mount example about what `$(pwd)` shares | N10 | Entire catalog |
-| 11 | Reconcile the `.dev` / `.com` domain split and the ghcr.io / Docker Hub path split | U4, U6 | Website + catalog |
-| 12 | Align the CVE claim across homepage, catalog and registry badges | U7 | Website |
 | 13 | Ask the build team why dev and prod have inverted layer counts | N9 | Build pipeline |
 | 14 | Correct the `keycloak` package label, and document its non-standard install path | K4, K7 | `keycloak` |
 
